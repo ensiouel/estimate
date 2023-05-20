@@ -48,7 +48,7 @@ docker compose up -d
 ### Получить время доступа к определенному сайту
 #### Запрос
 ```http request
-HTTP/1.1 http://localhost:8080/api/v1/estimate?url=google.com
+GET http://localhost:8080/api/v1/estimate?url=google.com HTTP/1.1
 Accept: application/json  
 ```
 
@@ -65,7 +65,7 @@ Accept: application/json
 ### Получить имя сайта с минимальным временем доступа
 #### Запрос
 ```http request
-HTTP/1.1 GET http://localhost:8080/api/v1/estimate/min
+GET http://localhost:8080/api/v1/estimate/min HTTP/1.1
 Accept: application/json  
 ```
 
@@ -83,7 +83,7 @@ Accept: application/json
 ### Получить имя сайта с максимальным временем доступа
 #### Запрос
 ```http request
-HTTP/1.1 GET http://localhost:8080/api/v1/estimate/max
+GET http://localhost:8080/api/v1/estimate/max HTTP/1.1
 Accept: application/json  
 ```
 
@@ -101,7 +101,7 @@ Accept: application/json
 ### Получить метрики по запросам
 #### Запрос
 ```http request
-HTTP/1.1 GET http://localhost:8080/admin/metrics  
+GET http://localhost:8080/admin/metrics HTTP/1.1
 Accept: application/json  
 Authorization: Basic YWRtaW46YWRtaW4=  
 ```
