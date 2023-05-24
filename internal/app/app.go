@@ -88,13 +88,12 @@ func (app *App) Run() {
 			estimateHandler,
 			adminHandler,
 		).Listen()
-		if err != nil && errors.Is(err, http.ErrServerClosed) == false {
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Fatal(err.Error())
 		}
 	}()
 
-	select {
-	case <-ctx.Done():
-		logger.Info("Stopping...")
-	}
+	<-ctx.Done()
+
+	logger.Info("Stopping...")
 }
