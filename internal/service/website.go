@@ -21,6 +21,9 @@ type WebsiteService interface {
 	Update(ctx context.Context, website entity.Website) error
 	GetByMinAccessTime(ctx context.Context) (entity.Website, error)
 	GetByMaxAccessTime(ctx context.Context) (entity.Website, error)
+
+	pingWebsite(website entity.Website) (entity.Website, error)
+	runEstimate(ctx context.Context) error
 }
 
 type websiteService struct {
@@ -70,6 +73,7 @@ func (service *websiteService) RunEstimation(ctx context.Context) error {
 	}
 }
 
+// runEstimate проверка всех сайтов
 func (service *websiteService) runEstimate(ctx context.Context) error {
 	websites, err := service.Select(ctx)
 	if err != nil && !errors.Is(err, apperror.NotFound) {
@@ -77,10 +81,17 @@ func (service *websiteService) runEstimate(ctx context.Context) error {
 	}
 
 	g := new(errgroup.Group)
+	g.SetLimit(10)
+
 	for _, website := range websites {
 		website := website
 		g.Go(func() error {
-			return service.pingWebsite(ctx, website)
+			updatedWebsite, err := service.pingWebsite(website)
+			if err != nil {
+				return err
+			}
+
+			return service.Update(ctx, updatedWebsite)
 		})
 	}
 
@@ -97,10 +108,11 @@ func (service *websiteService) runEstimate(ctx context.Context) error {
 	return nil
 }
 
-func (service *websiteService) pingWebsite(ctx context.Context, website entity.Website) error {
+// pingWebsite проверяет сайт и возвращает его обновленное состояние
+func (service *websiteService) pingWebsite(website entity.Website) (entity.Website, error) {
 	url, err := urlx.Parse(website.URL)
 	if err != nil {
-		return apperror.BadRequest.WithError(err)
+		return entity.Website{}, apperror.BadRequest.WithError(err)
 	}
 	url.Scheme = "https"
 
@@ -108,25 +120,23 @@ func (service *websiteService) pingWebsite(ctx context.Context, website entity.W
 
 	request, err := http.NewRequest(http.MethodGet, url.String(), nil)
 	if err != nil {
-		return err
+		return entity.Website{}, apperror.Internal.WithError(err)
 	}
 	request.Header.Set("User-Agent", uarand.GetRandom())
 
 	response, err := service.client.Do(request)
-	if err != nil || response.StatusCode != http.StatusOK {
+	if err != nil {
 		website.Available = false
 	} else {
-		website.Available = true
+		website.Available = response.StatusCode == http.StatusOK
+
+		response.Body.Close()
 	}
+
 	website.AccessTime = time.Since(now)
 	website.LastCheckAt = now.Add(website.AccessTime)
 
-	err = service.Update(ctx, website)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return website, nil
 }
 
 func (service *websiteService) Get(ctx context.Context, rawURL string) (entity.Website, error) {
