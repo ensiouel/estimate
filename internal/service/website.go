@@ -72,7 +72,7 @@ func (service *websiteService) RunEstimation(ctx context.Context) error {
 
 func (service *websiteService) runEstimate(ctx context.Context) error {
 	websites, err := service.Select(ctx)
-	if err != nil && errors.Is(err, apperror.NotFound) == false {
+	if err != nil && !errors.Is(err, apperror.NotFound) {
 		return err
 	}
 
@@ -90,7 +90,7 @@ func (service *websiteService) runEstimate(ctx context.Context) error {
 	}
 
 	err = service.cache.DelAll(ctx, service.cacheTag)
-	if err != nil && errors.Is(err, cache.Nil) == false {
+	if err != nil && !errors.Is(err, cache.Nil) {
 		return err
 	}
 
@@ -144,7 +144,7 @@ func (service *websiteService) Get(ctx context.Context, rawURL string) (entity.W
 		return entity.Website{}, err
 	}
 
-	if website.Available == false {
+	if !website.Available {
 		return entity.Website{}, errors.New("website is unavailable")
 	}
 
