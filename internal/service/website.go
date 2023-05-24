@@ -16,6 +16,8 @@ import (
 
 type WebsiteService interface {
 	RunEstimation(ctx context.Context) error
+	CheckWebsite(website entity.Website) (entity.Website, error)
+
 	Get(ctx context.Context, rawURL string) (entity.Website, error)
 	Select(ctx context.Context) ([]entity.Website, error)
 	Update(ctx context.Context, website entity.Website) error
@@ -82,8 +84,9 @@ func (service *websiteService) runEstimate(ctx context.Context) error {
 
 	for _, website := range websites {
 		website := website
+
 		g.Go(func() error {
-			updatedWebsite, err := service.pingWebsite(website)
+			updatedWebsite, err := service.CheckWebsite(website)
 			if err != nil {
 				return err
 			}
@@ -105,8 +108,8 @@ func (service *websiteService) runEstimate(ctx context.Context) error {
 	return nil
 }
 
-// pingWebsite проверяет сайт и возвращает его обновленное состояние
-func (service *websiteService) pingWebsite(website entity.Website) (entity.Website, error) {
+// CheckWebsite проверяет сайт и возвращает его обновленное состояние
+func (service *websiteService) CheckWebsite(website entity.Website) (entity.Website, error) {
 	url, err := urlx.Parse(website.URL)
 	if err != nil {
 		return entity.Website{}, apperror.BadRequest.WithError(err)
@@ -152,7 +155,7 @@ func (service *websiteService) Get(ctx context.Context, rawURL string) (entity.W
 	}
 
 	if !website.Available {
-		return entity.Website{}, apperror.Unknown.WithMessage("website is unavailable")
+		return entity.Website{}, apperror.Unavailable.WithMessage("website is unavailable")
 	}
 
 	return website, nil

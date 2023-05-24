@@ -42,11 +42,11 @@ func (server *Server) Handle(estimateHandler *handler.EstimateHandler, adminHand
 		},
 	})
 
-	api := server.router.Group("/api")
+	api := server.router.Group("/api", middleware.Metrics(server.redisClient))
 	{
 		v1 := api.Group("/v1")
 		{
-			estimateHandler.Register(v1.Group("/estimate", middleware.Metrics(server.redisClient)))
+			estimateHandler.Register(v1.Group("/estimate"))
 		}
 	}
 
@@ -57,4 +57,8 @@ func (server *Server) Handle(estimateHandler *handler.EstimateHandler, adminHand
 
 func (server *Server) Listen() error {
 	return server.router.Listen(server.conf.Addr)
+}
+
+func (server *Server) Shutdown() error {
+	return server.router.Shutdown()
 }

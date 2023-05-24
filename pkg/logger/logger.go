@@ -29,7 +29,7 @@ func New(logLevel string) *zap.Logger {
 		}
 	}
 
-	file, err := os.OpenFile("logs/estimate.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	file, err := os.OpenFile("logs/estimate.log", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}

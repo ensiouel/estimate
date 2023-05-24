@@ -8,4 +8,5 @@ var (
 	BadRequest    = New("bad request")
 	Unauthorized  = New("unauthorized")
 	Forbidden     = New("forbidden")
+	Unavailable   = New("unavailable")
 )

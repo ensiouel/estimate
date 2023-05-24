@@ -36,9 +36,9 @@ func (app *App) Run() {
 
 	logger := loggerpkg.New(app.conf.LogLevel)
 
-	logger.Info("starting app...")
+	logger.Info("starting app")
 
-	logger.Info("connecting to postgres...")
+	logger.Info("connecting to postgres")
 	pgClient, err := postgres.NewClient(ctx, postgres.Config{
 		Host:     app.conf.Postgres.Host,
 		Port:     app.conf.Postgres.Port,
@@ -50,7 +50,7 @@ func (app *App) Run() {
 		logger.Fatal("failed to connect to postgres", zap.Error(err))
 	}
 
-	logger.Info("connecting to redis...")
+	logger.Info("connecting to redis")
 	redisClient := redis.NewClient(&redis.Options{
 		Addr: app.conf.Redis.Addr,
 	})
@@ -63,32 +63,33 @@ func (app *App) Run() {
 
 	websiteStorage := storage.NewWebsiteStorage(pgClient)
 	websiteService := service.NewWebsiteService(websiteStorage, app.conf.EstimationPeriod, cache, "website")
+	estimateHandler := handler.NewEstimateHandler(websiteService, cache, "website")
 
-	logger.Info("running estimation...")
+	logger.Info("running estimation")
 	go func() {
 		err = websiteService.RunEstimation(ctx)
-		if err != nil {
+		if err != nil && !errors.Is(err, context.Canceled) {
 			logger.Fatal("failed to run estimation", zap.Error(err))
 		}
 	}()
-
-	estimateHandler := handler.NewEstimateHandler(websiteService, cache, "website")
 
 	metricsStorage := storage.NewMetricsStorage(redisClient)
 	metricsService := service.NewMetricsService(metricsStorage)
 
 	adminHandler := handler.NewAdminHandler(metricsService)
 
-	logger.Info("starting web service...")
+	server := transport.New(
+		app.conf.Server,
+		redisClient,
+		logger,
+	).Handle(
+		estimateHandler,
+		adminHandler,
+	)
+
+	logger.Info("starting web service")
 	go func() {
-		err = transport.New(
-			app.conf.Server,
-			redisClient,
-			logger,
-		).Handle(
-			estimateHandler,
-			adminHandler,
-		).Listen()
+		err = server.Listen()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Fatal("failed to start web service", zap.Error(err))
 		}
@@ -96,5 +97,11 @@ func (app *App) Run() {
 
 	<-ctx.Done()
 
-	logger.Info("stopping...")
+	logger.Info("stopping app")
+
+	logger.Info("shutting down web service")
+	err = server.Shutdown()
+	if err != nil {
+		logger.Fatal("failed to shutdown web service", zap.Error(err))
+	}
 }

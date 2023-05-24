@@ -53,7 +53,7 @@ func (cache *cache) Set(ctx context.Context, key string, tag string, value inter
 func (cache *cache) DelAll(ctx context.Context, tag string) error {
 	keys := cache.client.Keys(ctx, formatKey("*", tag)).Val()
 
-	pipeline := cache.client.Pipeline()
+	pipeline := cache.client.TxPipeline()
 	for _, key := range keys {
 		err := pipeline.Del(ctx, key).Err()
 		if err != nil {

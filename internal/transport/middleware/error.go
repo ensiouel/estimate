@@ -27,6 +27,8 @@ func Error(logger *zap.Logger) fiber.ErrorHandler {
 				c.Status(fiber.StatusBadRequest)
 			case apperror.Unauthorized.Code:
 				c.Status(fiber.StatusUnauthorized)
+			case apperror.Unavailable.Code:
+				c.Status(fiber.StatusOK)
 			}
 
 			return c.JSON(fiber.Map{"error": apperr})
