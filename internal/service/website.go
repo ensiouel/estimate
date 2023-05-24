@@ -116,13 +116,13 @@ func (service *websiteService) pingWebsite(website entity.Website) (entity.Websi
 	}
 	url.Scheme = "https"
 
-	now := time.Now()
-
 	request, err := http.NewRequest(http.MethodGet, url.String(), nil)
 	if err != nil {
 		return entity.Website{}, apperror.Internal.WithError(err)
 	}
 	request.Header.Set("User-Agent", uarand.GetRandom())
+
+	now := time.Now()
 
 	response, err := service.client.Do(request)
 	if err != nil {
@@ -155,7 +155,7 @@ func (service *websiteService) Get(ctx context.Context, rawURL string) (entity.W
 	}
 
 	if !website.Available {
-		return entity.Website{}, errors.New("website is unavailable")
+		return entity.Website{}, apperror.Unknown.WithMessage("website is unavailable")
 	}
 
 	return website, nil
