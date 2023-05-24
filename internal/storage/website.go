@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+//go:generate moq -out website_mock.go . WebsiteStorage
 type WebsiteStorage interface {
 	GetByURL(ctx context.Context, rawURL string) (entity.Website, error)
 	Update(ctx context.Context, website entity.Website) error

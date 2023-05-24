@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func Cache(expiration time.Duration, cache *cache.Cache, tag string) fiber.Handler {
+func Cache(expiration time.Duration, cache cache.Cache, tag string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		key := c.OriginalURL()
 

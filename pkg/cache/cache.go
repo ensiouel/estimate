@@ -11,17 +11,24 @@ const (
 	Nil    = redis.Nil
 )
 
-type Cache struct {
+//go:generate moq -out cache_mock.go . Cache
+type Cache interface {
+	Get(ctx context.Context, key string, tag string) (string, error)
+	Set(ctx context.Context, key string, tag string, value interface{}, expiration time.Duration) error
+	DelAll(ctx context.Context, tag string) error
+}
+
+type cache struct {
 	client *redis.Client
 }
 
-func New(client *redis.Client) *Cache {
-	return &Cache{
+func New(client *redis.Client) Cache {
+	return &cache{
 		client: client,
 	}
 }
 
-func (cache *Cache) Get(ctx context.Context, key string, tag string) (string, error) {
+func (cache *cache) Get(ctx context.Context, key string, tag string) (string, error) {
 	key = formatKey(key, tag)
 
 	result, err := cache.client.Get(ctx, key).Result()
@@ -32,7 +39,7 @@ func (cache *Cache) Get(ctx context.Context, key string, tag string) (string, er
 	return result, nil
 }
 
-func (cache *Cache) Set(ctx context.Context, key string, tag string, value interface{}, expiration time.Duration) error {
+func (cache *cache) Set(ctx context.Context, key string, tag string, value interface{}, expiration time.Duration) error {
 	key = formatKey(key, tag)
 
 	err := cache.client.Set(ctx, key, value, expiration).Err()
@@ -43,7 +50,7 @@ func (cache *Cache) Set(ctx context.Context, key string, tag string, value inter
 	return nil
 }
 
-func (cache *Cache) DelAll(ctx context.Context, tag string) error {
+func (cache *cache) DelAll(ctx context.Context, tag string) error {
 	keys := cache.client.Keys(ctx, formatKey("*", tag)).Val()
 
 	pipeline := cache.client.Pipeline()

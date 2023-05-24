@@ -21,20 +21,17 @@ type WebsiteService interface {
 	Update(ctx context.Context, website entity.Website) error
 	GetByMinAccessTime(ctx context.Context) (entity.Website, error)
 	GetByMaxAccessTime(ctx context.Context) (entity.Website, error)
-
-	pingWebsite(website entity.Website) (entity.Website, error)
-	runEstimate(ctx context.Context) error
 }
 
 type websiteService struct {
 	storage  storage.WebsiteStorage
 	period   time.Duration
-	cache    *cache.Cache
+	cache    cache.Cache
 	cacheTag string
 	client   *http.Client
 }
 
-func NewWebsiteService(storage storage.WebsiteStorage, period time.Duration, cache *cache.Cache, cacheTag string) WebsiteService {
+func NewWebsiteService(storage storage.WebsiteStorage, period time.Duration, cache cache.Cache, cacheTag string) WebsiteService {
 	client := &http.Client{
 		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
 			return nil

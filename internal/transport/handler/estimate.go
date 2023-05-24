@@ -11,11 +11,11 @@ import (
 
 type EstimateHandler struct {
 	websiteService service.WebsiteService
-	cache          *cache.Cache
+	cache          cache.Cache
 	cacheTag       string
 }
 
-func NewEstimateHandler(estimateService service.WebsiteService, cache *cache.Cache, cacheTag string) *EstimateHandler {
+func NewEstimateHandler(estimateService service.WebsiteService, cache cache.Cache, cacheTag string) *EstimateHandler {
 	return &EstimateHandler{
 		websiteService: estimateService,
 		cache:          cache,
