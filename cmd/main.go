@@ -1,6 +1,6 @@
 package main
 
-import "inspector/internal/app"
+import "estimate/internal/app"
 
 func main() {
 	app.New().

@@ -3,10 +3,10 @@ package storage
 import (
 	"context"
 	"errors"
+	"estimate/internal/entity"
+	"estimate/pkg/apperror"
+	"estimate/pkg/postgres"
 	"github.com/jackc/pgx/v5"
-	"inspector/internal/entity"
-	"inspector/pkg/apperror"
-	"inspector/pkg/postgres"
 )
 
 type WebsiteStorage interface {

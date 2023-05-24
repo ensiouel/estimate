@@ -1,11 +1,11 @@
 package handler
 
 import (
+	"estimate/internal/dto"
+	"estimate/internal/service"
+	"estimate/internal/transport/middleware"
+	"estimate/pkg/cache"
 	"github.com/gofiber/fiber/v2"
-	"inspector/internal/dto"
-	"inspector/internal/service"
-	"inspector/internal/transport/middleware"
-	"inspector/pkg/cache"
 	"time"
 )
 

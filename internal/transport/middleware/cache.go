@@ -2,9 +2,9 @@ package middleware
 
 import (
 	"errors"
+	"estimate/pkg/cache"
 	"github.com/gofiber/fiber/v2"
 	"github.com/redis/go-redis/v9"
-	"inspector/pkg/cache"
 	"time"
 )
 

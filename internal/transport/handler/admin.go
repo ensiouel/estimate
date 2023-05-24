@@ -1,8 +1,8 @@
 package handler
 
 import (
+	"estimate/internal/service"
 	"github.com/gofiber/fiber/v2"
-	"inspector/internal/service"
 )
 
 type AdminHandler struct {

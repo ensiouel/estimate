@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
-	"inspector/internal/entity"
-	"inspector/internal/storage"
+	"estimate/internal/entity"
+	"estimate/internal/storage"
 )
 
 type MetricsService interface {

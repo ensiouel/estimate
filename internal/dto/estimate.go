@@ -2,8 +2,8 @@ package dto
 
 import (
 	"encoding/json"
+	"estimate/pkg/apperror"
 	"github.com/goware/urlx"
-	"inspector/pkg/apperror"
 	"time"
 )
 

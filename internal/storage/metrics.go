@@ -2,8 +2,8 @@ package storage
 
 import (
 	"context"
+	"estimate/internal/entity"
 	"github.com/redis/go-redis/v9"
-	"inspector/internal/entity"
 	"strings"
 )
 

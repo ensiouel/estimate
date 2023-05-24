@@ -1,15 +1,15 @@
 package transport
 
 import (
+	"estimate/internal/config"
+	"estimate/internal/transport/handler"
+	"estimate/internal/transport/middleware"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/basicauth"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
-	"inspector/internal/config"
-	"inspector/internal/transport/handler"
-	"inspector/internal/transport/middleware"
 )
 
 type Server struct {

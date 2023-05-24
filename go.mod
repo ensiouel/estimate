@@ -1,4 +1,4 @@
-module inspector
+module estimate
 
 go 1.20
 

@@ -3,13 +3,13 @@ package service
 import (
 	"context"
 	"errors"
+	"estimate/internal/entity"
+	"estimate/internal/storage"
+	"estimate/pkg/apperror"
+	"estimate/pkg/cache"
 	"github.com/corpix/uarand"
 	"github.com/goware/urlx"
 	"golang.org/x/sync/errgroup"
-	"inspector/internal/entity"
-	"inspector/internal/storage"
-	"inspector/pkg/apperror"
-	"inspector/pkg/cache"
 	"net/http"
 	"time"
 )

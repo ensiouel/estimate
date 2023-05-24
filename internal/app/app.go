@@ -3,16 +3,16 @@ package app
 import (
 	"context"
 	"errors"
+	"estimate/internal/config"
+	"estimate/internal/service"
+	"estimate/internal/storage"
+	"estimate/internal/transport"
+	"estimate/internal/transport/handler"
+	cachepkg "estimate/pkg/cache"
+	loggerpkg "estimate/pkg/logger"
+	"estimate/pkg/postgres"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
-	"inspector/internal/config"
-	"inspector/internal/service"
-	"inspector/internal/storage"
-	"inspector/internal/transport"
-	"inspector/internal/transport/handler"
-	cachepkg "inspector/pkg/cache"
-	loggerpkg "inspector/pkg/logger"
-	"inspector/pkg/postgres"
 	"net/http"
 	"os/signal"
 	"syscall"
@@ -36,9 +36,9 @@ func (app *App) Run() {
 
 	logger := loggerpkg.New(app.conf.LogLevel)
 
-	logger.Info("Starting app...")
+	logger.Info("starting app...")
 
-	logger.Info("Connecting to postgres...")
+	logger.Info("connecting to postgres...")
 	pgClient, err := postgres.NewClient(ctx, postgres.Config{
 		Host:     app.conf.Postgres.Host,
 		Port:     app.conf.Postgres.Port,
@@ -47,16 +47,16 @@ func (app *App) Run() {
 		DB:       app.conf.Postgres.DB,
 	})
 	if err != nil {
-		logger.Fatal("Failed to connect to postgres", zap.Error(err))
+		logger.Fatal("failed to connect to postgres", zap.Error(err))
 	}
 
-	logger.Info("Connecting to redis...")
+	logger.Info("connecting to redis...")
 	redisClient := redis.NewClient(&redis.Options{
 		Addr: app.conf.Redis.Addr,
 	})
 	_, err = redisClient.Ping(ctx).Result()
 	if err != nil {
-		logger.Fatal("Failed to connect to redis", zap.Error(err))
+		logger.Fatal("failed to connect to redis", zap.Error(err))
 	}
 
 	cache := cachepkg.New(redisClient)
@@ -64,11 +64,11 @@ func (app *App) Run() {
 	websiteStorage := storage.NewWebsiteStorage(pgClient)
 	websiteService := service.NewWebsiteService(websiteStorage, app.conf.EstimationPeriod, cache, "website")
 
-	logger.Info("Running estimation...")
+	logger.Info("running estimation...")
 	go func() {
 		err = websiteService.RunEstimation(ctx)
 		if err != nil {
-			logger.Fatal("Failed to run estimation", zap.Error(err))
+			logger.Fatal("failed to run estimation", zap.Error(err))
 		}
 	}()
 
@@ -79,7 +79,7 @@ func (app *App) Run() {
 
 	adminHandler := handler.NewAdminHandler(metricsService)
 
-	logger.Info("Starting web service...")
+	logger.Info("starting web service...")
 	go func() {
 		err = transport.New(
 			app.conf.Server,
@@ -90,11 +90,11 @@ func (app *App) Run() {
 			adminHandler,
 		).Listen()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.Fatal("Failed to start web service", zap.Error(err))
+			logger.Fatal("failed to start web service", zap.Error(err))
 		}
 	}()
 
 	<-ctx.Done()
 
-	logger.Info("Stopping...")
+	logger.Info("stopping...")
 }

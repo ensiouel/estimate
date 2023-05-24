@@ -2,9 +2,9 @@ package middleware
 
 import (
 	"errors"
+	"estimate/pkg/apperror"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
-	"inspector/pkg/apperror"
 )
 
 func Error(logger *zap.Logger) fiber.ErrorHandler {
