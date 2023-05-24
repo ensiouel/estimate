@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 	"inspector/internal/config"
 	"inspector/internal/service"
 	"inspector/internal/storage"
@@ -46,7 +47,7 @@ func (app *App) Run() {
 		DB:       app.conf.Postgres.DB,
 	})
 	if err != nil {
-		logger.Fatal(err.Error())
+		logger.Fatal("Failed to connect to postgres", zap.Error(err))
 	}
 
 	logger.Info("Connecting to redis...")
@@ -55,7 +56,7 @@ func (app *App) Run() {
 	})
 	_, err = redisClient.Ping(ctx).Result()
 	if err != nil {
-		logger.Fatal(err.Error())
+		logger.Fatal("Failed to connect to redis", zap.Error(err))
 	}
 
 	cache := cachepkg.New(redisClient)
@@ -67,7 +68,7 @@ func (app *App) Run() {
 	go func() {
 		err = websiteService.RunEstimation(ctx)
 		if err != nil {
-			logger.Fatal(err.Error())
+			logger.Fatal("Failed to run estimation", zap.Error(err))
 		}
 	}()
 
@@ -89,7 +90,7 @@ func (app *App) Run() {
 			adminHandler,
 		).Listen()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.Fatal(err.Error())
+			logger.Fatal("Failed to start web service", zap.Error(err))
 		}
 	}()
 
