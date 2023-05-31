@@ -80,9 +80,11 @@ func (service *websiteService) watch(ctx context.Context) error {
 		return err
 	}
 
-	pool := worker.NewPool(20)
+	workerCount := 20
 
-	jobs := make(chan worker.Job, len(websites))
+	pool := worker.NewPool(workerCount)
+
+	jobs := make(chan worker.Job, workerCount)
 	pool.AddJobs(jobs)
 
 	go func() {
