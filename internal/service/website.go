@@ -7,9 +7,9 @@ import (
 	"estimate/internal/storage"
 	"estimate/pkg/apperror"
 	"estimate/pkg/cache"
+	"estimate/pkg/worker"
 	"github.com/corpix/uarand"
 	"github.com/goware/urlx"
-	"golang.org/x/sync/errgroup"
 	"net/http"
 	"time"
 )
@@ -80,26 +80,43 @@ func (service *websiteService) watch(ctx context.Context) error {
 		return err
 	}
 
-	// TODO: заменить errgroup на worker pool
-	g := new(errgroup.Group)
-	g.SetLimit(20)
+	pool := worker.NewPool(20)
 
-	for _, website := range websites {
-		website := website
+	jobs := make(chan worker.Job, len(websites))
+	pool.AddJobs(jobs)
 
-		g.Go(func() error {
-			updatedWebsite, err := service.Check(website)
-			if err != nil {
-				return err
+	go func() {
+		defer close(jobs)
+
+		for _, website := range websites {
+			website := website
+
+			jobs <- worker.Job{
+				Fn: func(_ context.Context) (any, error) {
+					updatedWebsite, err := service.Check(website)
+					if err != nil {
+						return nil, err
+					}
+
+					return updatedWebsite, nil
+				},
 			}
+		}
+	}()
 
-			return service.Update(ctx, updatedWebsite)
-		})
-	}
+	results := pool.Run(ctx)
 
-	err = g.Wait()
-	if err != nil {
-		return err
+	for result := range results {
+		if err = result.Err; err != nil {
+			return err
+		}
+
+		updatedWebsite := result.Value.(entity.Website)
+
+		err = service.Update(ctx, updatedWebsite)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = service.cache.DelAll(ctx, service.cacheTag)
