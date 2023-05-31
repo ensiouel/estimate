@@ -62,20 +62,20 @@ func (app *App) Run() {
 	cache := cachepkg.New(redisClient)
 
 	websiteStorage := storage.NewWebsiteStorage(pgClient)
-	websiteService := service.NewWebsiteService(websiteStorage, app.conf.EstimationPeriod, cache, "website")
-	estimateHandler := handler.NewEstimateHandler(websiteService, cache, "website")
+	websiteService := service.NewWebsiteService(websiteStorage, cache, "website")
 
-	logger.Info("running estimation")
+	logger.Info("starting estimation service")
 	go func() {
-		err = websiteService.RunEstimation(ctx)
+		err = websiteService.Watch(ctx, app.conf.WatchPeriod)
 		if err != nil && !errors.Is(err, context.Canceled) {
-			logger.Fatal("failed to run estimation", zap.Error(err))
+			logger.Fatal("failed to start estimation service", zap.Error(err))
 		}
 	}()
 
 	metricsStorage := storage.NewMetricsStorage(redisClient)
 	metricsService := service.NewMetricsService(metricsStorage)
 
+	estimateHandler := handler.NewEstimateHandler(websiteService, cache, "website")
 	adminHandler := handler.NewAdminHandler(metricsService)
 
 	server := transport.New(

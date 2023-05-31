@@ -24,12 +24,14 @@ func NewEstimateHandler(estimateService service.WebsiteService, cache cache.Cach
 }
 
 func (handler *EstimateHandler) Register(router fiber.Router) {
-	router.Get("", middleware.Cache(1*time.Minute, handler.cache, handler.cacheTag), handler.GetWebsiteAccessTime)
-	router.Get("/max", middleware.Cache(1*time.Minute, handler.cache, handler.cacheTag), handler.GetWebsiteByMaxAccessTime)
-	router.Get("/min", middleware.Cache(1*time.Minute, handler.cache, handler.cacheTag), handler.GetWebsiteByMinAccessTime)
+	cacheMiddleware := middleware.Cache(1*time.Minute, handler.cache, handler.cacheTag)
+
+	router.Get("", cacheMiddleware, handler.CheckWebsite)
+	router.Get("/max", cacheMiddleware, handler.GetWebsiteByMaxAccessTime)
+	router.Get("/min", cacheMiddleware, handler.GetWebsiteByMinAccessTime)
 }
 
-func (handler *EstimateHandler) GetWebsiteAccessTime(c *fiber.Ctx) error {
+func (handler *EstimateHandler) CheckWebsite(c *fiber.Ctx) error {
 	var request dto.GetWebsiteAccessTimeRequest
 	if err := c.QueryParser(&request); err != nil {
 		return err
@@ -39,14 +41,14 @@ func (handler *EstimateHandler) GetWebsiteAccessTime(c *fiber.Ctx) error {
 		return err
 	}
 
-	website, err := handler.websiteService.Get(c.Context(), request.URL)
+	website, err := handler.websiteService.CheckByURL(request.URL)
 	if err != nil {
 		return err
 	}
 
 	return c.JSON(dto.GetWebsiteAccessTimeResponse{
-		LastCheckAt: website.LastCheckAt,
 		AccessTime:  dto.Duration{Duration: website.AccessTime},
+		LastCheckAt: website.LastCheckAt,
 	})
 }
 
@@ -58,8 +60,8 @@ func (handler *EstimateHandler) GetWebsiteByMaxAccessTime(c *fiber.Ctx) error {
 
 	return c.JSON(dto.GetWebsiteWithMaxAccessTimeResponse{
 		URL:         website.URL,
-		LastCheckAt: website.LastCheckAt,
 		AccessTime:  dto.Duration{Duration: website.AccessTime},
+		LastCheckAt: website.LastCheckAt,
 	})
 }
 
@@ -71,7 +73,7 @@ func (handler *EstimateHandler) GetWebsiteByMinAccessTime(c *fiber.Ctx) error {
 
 	return c.JSON(dto.GetWebsiteWithMinAccessTimeResponse{
 		URL:         website.URL,
-		LastCheckAt: website.LastCheckAt,
 		AccessTime:  dto.Duration{Duration: website.AccessTime},
+		LastCheckAt: website.LastCheckAt,
 	})
 }

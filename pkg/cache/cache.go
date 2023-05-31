@@ -11,7 +11,6 @@ const (
 	Nil    = redis.Nil
 )
 
-//go:generate moq -out cache_mock.go . Cache
 type Cache interface {
 	Get(ctx context.Context, key string, tag string) (string, error)
 	Set(ctx context.Context, key string, tag string, value interface{}, expiration time.Duration) error

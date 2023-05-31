@@ -15,10 +15,10 @@ import (
 )
 
 type WebsiteService interface {
-	RunEstimation(ctx context.Context) error
-	CheckWebsite(website entity.Website) (entity.Website, error)
-
-	Get(ctx context.Context, rawURL string) (entity.Website, error)
+	Watch(ctx context.Context, interval time.Duration) error
+	Check(website entity.Website) (entity.Website, error)
+	CheckByURL(rawURL string) (entity.Website, error)
+	GetByURL(ctx context.Context, rawURL string) (entity.Website, error)
 	Select(ctx context.Context) ([]entity.Website, error)
 	Update(ctx context.Context, website entity.Website) error
 	GetByMinAccessTime(ctx context.Context) (entity.Website, error)
@@ -27,42 +27,44 @@ type WebsiteService interface {
 
 type websiteService struct {
 	storage  storage.WebsiteStorage
-	period   time.Duration
+	client   *http.Client
 	cache    cache.Cache
 	cacheTag string
-	client   *http.Client
 }
 
-func NewWebsiteService(storage storage.WebsiteStorage, period time.Duration, cache cache.Cache, cacheTag string) WebsiteService {
+func NewWebsiteService(
+	storage storage.WebsiteStorage,
+	cache cache.Cache,
+	cacheTag string,
+) WebsiteService {
 	client := &http.Client{
 		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
 			return nil
 		},
-		Timeout: time.Second * 15,
+		Timeout: time.Second * 10,
 	}
 
 	return &websiteService{
 		storage:  storage,
-		period:   period,
+		client:   client,
 		cache:    cache,
 		cacheTag: cacheTag,
-		client:   client,
 	}
 }
 
-func (service *websiteService) RunEstimation(ctx context.Context) error {
-	err := service.runEstimate(ctx)
+func (service *websiteService) Watch(ctx context.Context, watchPeriod time.Duration) error {
+	err := service.watch(ctx)
 	if err != nil {
 		return err
 	}
 
-	ticker := time.NewTicker(service.period)
+	ticker := time.NewTicker(watchPeriod)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-			err = service.runEstimate(ctx)
+			err = service.watch(ctx)
 			if err != nil {
 				return err
 			}
@@ -72,21 +74,21 @@ func (service *websiteService) RunEstimation(ctx context.Context) error {
 	}
 }
 
-// runEstimate проверка всех сайтов
-func (service *websiteService) runEstimate(ctx context.Context) error {
+func (service *websiteService) watch(ctx context.Context) error {
 	websites, err := service.Select(ctx)
 	if err != nil && !errors.Is(err, apperror.NotFound) {
 		return err
 	}
 
+	// TODO: заменить errgroup на worker pool
 	g := new(errgroup.Group)
-	g.SetLimit(10)
+	g.SetLimit(20)
 
 	for _, website := range websites {
 		website := website
 
 		g.Go(func() error {
-			updatedWebsite, err := service.CheckWebsite(website)
+			updatedWebsite, err := service.Check(website)
 			if err != nil {
 				return err
 			}
@@ -108,8 +110,8 @@ func (service *websiteService) runEstimate(ctx context.Context) error {
 	return nil
 }
 
-// CheckWebsite проверяет сайт и возвращает его обновленное состояние
-func (service *websiteService) CheckWebsite(website entity.Website) (entity.Website, error) {
+// Check проверяет сайт и возвращает его обновленное состояние
+func (service *websiteService) Check(website entity.Website) (entity.Website, error) {
 	url, err := urlx.Parse(website.URL)
 	if err != nil {
 		return entity.Website{}, apperror.BadRequest.WithError(err)
@@ -122,24 +124,38 @@ func (service *websiteService) CheckWebsite(website entity.Website) (entity.Webs
 	}
 	request.Header.Set("User-Agent", uarand.GetRandom())
 
-	now := time.Now()
+	website.LastCheckAt = time.Now()
 
 	response, err := service.client.Do(request)
 	if err != nil {
 		website.Available = false
 	} else {
-		website.Available = response.StatusCode == http.StatusOK
-
 		response.Body.Close()
-	}
 
-	website.AccessTime = time.Since(now)
-	website.LastCheckAt = now.Add(website.AccessTime)
+		website.Available = response.StatusCode == http.StatusOK
+		if website.Available {
+			website.AccessTime = time.Since(website.LastCheckAt)
+		}
+	}
 
 	return website, nil
 }
 
-func (service *websiteService) Get(ctx context.Context, rawURL string) (entity.Website, error) {
+// CheckByURL проверяет сайт по ссылке и возвращает его обновленное состояние, возвращет ошибку, если сайт недоступен
+func (service *websiteService) CheckByURL(rawURL string) (entity.Website, error) {
+	website, err := service.Check(entity.Website{URL: rawURL})
+	if err != nil {
+		return entity.Website{}, err
+	}
+
+	if !website.Available {
+		return entity.Website{}, apperror.Unavailable.WithMessage("website is unavailable")
+	}
+
+	return website, nil
+}
+
+func (service *websiteService) GetByURL(ctx context.Context, rawURL string) (entity.Website, error) {
 	url, err := urlx.Parse(rawURL)
 	if err != nil {
 		return entity.Website{}, apperror.BadRequest.WithError(err)

@@ -7,11 +7,11 @@ import (
 )
 
 type Config struct {
-	Server           Server
-	Postgres         Postgres
-	Redis            Redis
-	EstimationPeriod time.Duration `env:"ESTIMATION_PERIOD" env-default:"5m"`
-	LogLevel         string        `env:"LOG_LEVEL"`
+	Server      Server
+	Postgres    Postgres
+	Redis       Redis
+	WatchPeriod time.Duration `env:"WATCH_PERIOD" env-default:"5m"`
+	LogLevel    string        `env:"LOG_LEVEL"`
 }
 
 type Server struct {
