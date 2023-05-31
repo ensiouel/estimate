@@ -2,6 +2,7 @@ package handler
 
 import (
 	"estimate/internal/dto"
+	"estimate/internal/entity"
 	"estimate/internal/service"
 	"estimate/internal/transport/middleware"
 	"estimate/pkg/cache"
@@ -33,15 +34,18 @@ func (handler *EstimateHandler) Register(router fiber.Router) {
 
 func (handler *EstimateHandler) CheckWebsite(c *fiber.Ctx) error {
 	var request dto.GetWebsiteAccessTimeRequest
-	if err := c.QueryParser(&request); err != nil {
+	err := c.QueryParser(&request)
+	if err != nil {
 		return err
 	}
 
-	if err := request.Validate(); err != nil {
+	err = request.Validate()
+	if err != nil {
 		return err
 	}
 
-	website, err := handler.websiteService.CheckByURL(request.URL)
+	var website entity.Website
+	website, err = handler.websiteService.GetByURL(c.Context(), request.URL)
 	if err != nil {
 		return err
 	}

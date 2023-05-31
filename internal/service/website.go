@@ -165,10 +165,6 @@ func (service *websiteService) CheckByURL(rawURL string) (entity.Website, error)
 		return entity.Website{}, err
 	}
 
-	if !website.Available {
-		return entity.Website{}, apperror.Unavailable.WithMessage("website is unavailable")
-	}
-
 	return website, nil
 }
 
@@ -178,13 +174,17 @@ func (service *websiteService) GetByURL(ctx context.Context, rawURL string) (ent
 		return entity.Website{}, apperror.BadRequest.WithError(err)
 	}
 
-	website, err := service.storage.GetByURL(ctx, url.Host)
+	var website entity.Website
+	website, err = service.storage.GetByURL(ctx, url.Host)
 	if err != nil {
-		if apperr, ok := apperror.Is(err, apperror.NotFound); ok {
-			return entity.Website{}, apperr.WithMessage("website not found")
+		if !errors.Is(err, apperror.NotFound) {
+			return entity.Website{}, err
 		}
 
-		return entity.Website{}, err
+		website, err = service.CheckByURL(rawURL)
+		if err != nil {
+			return entity.Website{}, err
+		}
 	}
 
 	if !website.Available {
