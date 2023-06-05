@@ -1,4 +1,4 @@
-package transport
+package rest
 
 import "github.com/gofiber/fiber/v2"
 

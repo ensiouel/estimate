@@ -4,28 +4,26 @@ import (
 	"estimate/internal/dto"
 	"estimate/internal/entity"
 	"estimate/internal/service"
-	"estimate/internal/transport/middleware"
-	"estimate/pkg/cache"
+	"estimate/internal/transport/rest/middleware"
+	"github.com/alejandro-carstens/gocache"
 	"github.com/gofiber/fiber/v2"
 	"time"
 )
 
 type EstimateHandler struct {
 	websiteService service.WebsiteService
-	cache          cache.Cache
-	cacheTag       string
+	cache          gocache.TaggedCache
 }
 
-func NewEstimateHandler(estimateService service.WebsiteService, cache cache.Cache, cacheTag string) *EstimateHandler {
+func NewEstimateHandler(websiteService service.WebsiteService, cache gocache.TaggedCache) *EstimateHandler {
 	return &EstimateHandler{
-		websiteService: estimateService,
+		websiteService: websiteService,
 		cache:          cache,
-		cacheTag:       cacheTag,
 	}
 }
 
 func (handler *EstimateHandler) Register(router fiber.Router) {
-	cacheMiddleware := middleware.Cache(1*time.Minute, handler.cache, handler.cacheTag)
+	cacheMiddleware := middleware.Cache(1*time.Minute, handler.cache)
 
 	router.Get("", cacheMiddleware, handler.CheckWebsite)
 	router.Get("/max", cacheMiddleware, handler.GetWebsiteByMaxAccessTime)

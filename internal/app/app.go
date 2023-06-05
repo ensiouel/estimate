@@ -6,11 +6,12 @@ import (
 	"estimate/internal/config"
 	"estimate/internal/service"
 	"estimate/internal/storage"
-	"estimate/internal/transport"
-	"estimate/internal/transport/handler"
-	cachepkg "estimate/pkg/cache"
+	"estimate/internal/transport/rest"
+	"estimate/internal/transport/rest/handler"
 	loggerpkg "estimate/pkg/logger"
 	"estimate/pkg/postgres"
+	"github.com/alejandro-carstens/gocache"
+	"github.com/alejandro-carstens/gocache/encoder"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"net/http"
@@ -59,10 +60,18 @@ func (app *App) Run() {
 		logger.Fatal("failed to connect to redis", zap.Error(err))
 	}
 
-	cache := cachepkg.New(redisClient)
+	cache, err := gocache.New(&gocache.RedisConfig{
+		Prefix: "gocache:",
+		Addr:   app.conf.Redis.Addr,
+	}, encoder.JSON{})
+	if err != nil {
+		logger.Fatal("failed to connect to redis cache", zap.Error(err))
+	}
+
+	estimateCache := cache.Tags("estimate")
 
 	websiteStorage := storage.NewWebsiteStorage(pgClient)
-	websiteService := service.NewWebsiteService(websiteStorage, cache, "website")
+	websiteService := service.NewWebsiteService(websiteStorage, estimateCache)
 
 	logger.Info("starting estimation service")
 	go func() {
@@ -75,10 +84,10 @@ func (app *App) Run() {
 	metricsStorage := storage.NewMetricsStorage(redisClient)
 	metricsService := service.NewMetricsService(metricsStorage)
 
-	estimateHandler := handler.NewEstimateHandler(websiteService, cache, "website")
+	estimateHandler := handler.NewEstimateHandler(websiteService, estimateCache)
 	adminHandler := handler.NewAdminHandler(metricsService)
 
-	server := transport.New(
+	server := rest.New(
 		app.conf.Server,
 		redisClient,
 		logger,

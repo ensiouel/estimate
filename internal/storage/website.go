@@ -27,7 +27,7 @@ func NewWebsiteStorage(client postgres.Client) WebsiteStorage {
 
 func (storage *websiteStorage) GetByURL(ctx context.Context, rawURL string) (entity.Website, error) {
 	q := `
-SELECT url, last_check_at, access_time, available
+SELECT url, last_check_at, access_time, status_code
 FROM website
 WHERE url = $1
 `
@@ -50,11 +50,11 @@ func (storage *websiteStorage) Update(ctx context.Context, website entity.Websit
 UPDATE website
 SET last_check_at = $1,
     access_time = $2,
-    available   = $3
+    status_code = $3
 WHERE url = $4
 `
 
-	_, err := storage.client.Exec(ctx, q, website.LastCheckAt, website.AccessTime, website.Available, website.URL)
+	_, err := storage.client.Exec(ctx, q, website.LastCheckAt, website.AccessTime, website.StatusCode, website.URL)
 	if err != nil {
 		return apperror.Internal.WithError(err)
 	}
@@ -67,9 +67,9 @@ func (storage *websiteStorage) GetByMinAccessTime(ctx context.Context) (entity.W
 SELECT url,
        last_check_at,
        access_time,
-       available
+       status_code
 FROM website
-WHERE available = true
+WHERE status_code = 200
 ORDER BY access_time
 LIMIT 1
 `
@@ -92,9 +92,9 @@ func (storage *websiteStorage) GetByMaxAccessTime(ctx context.Context) (entity.W
 SELECT url,
        last_check_at,
        access_time,
-       available
+       status_code
 FROM website
-WHERE available = true
+WHERE status_code = 200
 ORDER BY access_time DESC
 LIMIT 1
 `
@@ -117,7 +117,7 @@ func (storage *websiteStorage) Select(ctx context.Context) ([]entity.Website, er
 SELECT url,
        last_check_at,
        access_time,
-       available
+       status_code
 FROM website
 `
 

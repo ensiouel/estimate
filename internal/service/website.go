@@ -6,10 +6,11 @@ import (
 	"estimate/internal/entity"
 	"estimate/internal/storage"
 	"estimate/pkg/apperror"
-	"estimate/pkg/cache"
 	"estimate/pkg/worker"
+	"github.com/alejandro-carstens/gocache"
 	"github.com/corpix/uarand"
 	"github.com/goware/urlx"
+	"log"
 	"net/http"
 	"time"
 )
@@ -26,16 +27,14 @@ type WebsiteService interface {
 }
 
 type websiteService struct {
-	storage  storage.WebsiteStorage
-	client   *http.Client
-	cache    cache.Cache
-	cacheTag string
+	storage storage.WebsiteStorage
+	client  *http.Client
+	cache   gocache.TaggedCache
 }
 
 func NewWebsiteService(
 	storage storage.WebsiteStorage,
-	cache cache.Cache,
-	cacheTag string,
+	cache gocache.TaggedCache,
 ) WebsiteService {
 	client := &http.Client{
 		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
@@ -45,10 +44,9 @@ func NewWebsiteService(
 	}
 
 	return &websiteService{
-		storage:  storage,
-		client:   client,
-		cache:    cache,
-		cacheTag: cacheTag,
+		storage: storage,
+		client:  client,
+		cache:   cache,
 	}
 }
 
@@ -93,6 +91,11 @@ func (service *websiteService) watch(ctx context.Context) error {
 		for _, website := range websites {
 			website := website
 
+			if website.StatusCode == http.StatusTooManyRequests && time.Since(website.LastCheckAt) < 10*time.Minute {
+				log.Printf("skipping: url = %s, duration = %s\n", website.URL, time.Since(website.LastCheckAt))
+				continue
+			}
+
 			jobs <- worker.Job{
 				Fn: func(_ context.Context) (any, error) {
 					updatedWebsite, err := service.Check(website)
@@ -121,9 +124,9 @@ func (service *websiteService) watch(ctx context.Context) error {
 		}
 	}
 
-	err = service.cache.DelAll(ctx, service.cacheTag)
-	if err != nil && !errors.Is(err, cache.Nil) {
-		return err
+	_, err = service.cache.Flush()
+	if err != nil {
+		return apperror.Internal.WithError(err)
 	}
 
 	return nil
@@ -147,12 +150,12 @@ func (service *websiteService) Check(website entity.Website) (entity.Website, er
 
 	response, err := service.client.Do(request)
 	if err != nil {
-		website.Available = false
+		website.StatusCode = 0
 	} else {
-		response.Body.Close()
+		_ = response.Body.Close()
 
-		website.Available = response.StatusCode == http.StatusOK
-		if website.Available {
+		website.StatusCode = response.StatusCode
+		if website.StatusCode == http.StatusOK {
 			website.AccessTime = time.Since(website.LastCheckAt)
 		}
 	}
@@ -189,7 +192,7 @@ func (service *websiteService) GetByURL(ctx context.Context, rawURL string) (ent
 		}
 	}
 
-	if !website.Available {
+	if website.StatusCode != http.StatusOK {
 		return entity.Website{}, apperror.Unavailable.WithMessage("website is unavailable")
 	}
 

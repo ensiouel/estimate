@@ -2,26 +2,25 @@ package middleware
 
 import (
 	"errors"
-	"estimate/pkg/cache"
+	"github.com/alejandro-carstens/gocache"
 	"github.com/gofiber/fiber/v2"
-	"github.com/redis/go-redis/v9"
 	"time"
 )
 
-func Cache(expiration time.Duration, cache cache.Cache, tag string) fiber.Handler {
+func Cache(expiration time.Duration, cache gocache.TaggedCache) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		key := c.OriginalURL()
 
-		result, err := cache.Get(c.Context(), key, tag)
+		result, err := cache.GetString(key)
 		if err != nil {
-			if errors.Is(err, redis.Nil) {
+			if errors.Is(err, gocache.ErrNotFound) {
 				err = c.Next()
 				if err != nil {
 					return err
 				}
 
 				body := c.Response().Body()
-				err = cache.Set(c.Context(), key, tag, body, expiration)
+				err = cache.Put(key, string(body), expiration)
 				if err != nil {
 					return err
 				}

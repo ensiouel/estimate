@@ -5,7 +5,7 @@ CREATE TABLE website
     url           TEXT        NOT NULL UNIQUE,
     last_check_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     access_time   INTERVAL    NOT NULL DEFAULT '0',
-    available     BOOLEAN     NOT NULL DEFAULT false
+    status_code   INTEGER     NOT NULL DEFAULT 0
 );
 
 INSERT

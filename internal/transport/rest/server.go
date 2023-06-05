@@ -1,12 +1,13 @@
-package transport
+package rest
 
 import (
 	"estimate/internal/config"
-	"estimate/internal/transport/handler"
-	"estimate/internal/transport/middleware"
+	"estimate/internal/transport/rest/handler"
+	"estimate/internal/transport/rest/middleware"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/basicauth"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/pprof"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
@@ -24,6 +25,7 @@ func New(conf config.Server, redisClient *redis.Client, log *zap.Logger) *Server
 	})
 
 	router.Use(
+		pprof.New(),
 		recover.New(),
 		logger.New(),
 	)
